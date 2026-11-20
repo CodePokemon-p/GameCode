@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Virtual env
+.venv/
+venv/
+
+# Env / secrets
+.env
+*.env
+
+# Packaging output
+dist/
+build/
+*.spec
+
+# Runtime-generated encrypted artifacts (regenerated on first run)
+prompts/*.enc
+licenses/*.lic
+handoffs/*.md
+!prompts/.gitkeep
+!licenses/.gitkeep
+!handoffs/.gitkeep
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,26 @@
+[project]
+name = "gamecode"
+version = "0.1.0"
+description = "GameCode — a locked-down 5-agent C++/C# coding assistant for the Infotainment Academy test task"
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+    "cryptography>=42.0.0",
+    "textual>=0.60.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-v --strict-markers"
