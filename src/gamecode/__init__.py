@@ -10,6 +10,7 @@ from .agents import (
     Guardrail,
     GuardrailResult,
 )
+from .handoff import HandoffContext, HandoffManager, TranscriptEntry
 from .security import (
     AES256Cipher,
     DecryptionError,
@@ -27,5 +28,7 @@ __all__ = [
     # agents
     "AGENT_ORDER", "AGENT_SPECS", "AgentManager", "AgentResponse",
     "AgentRole", "AgentSpec", "Guardrail", "GuardrailResult",
+    # handoff
+    "HandoffContext", "HandoffManager", "TranscriptEntry",
     "__version__",
 ]

@@ -29,3 +29,5 @@ handoffs/*.md
 # OS junk
 .DS_Store
 Thumbs.db
+handoffs/*
+!handoffs/.gitkeep
