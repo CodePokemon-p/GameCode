@@ -135,3 +135,32 @@ class TestAgentManager:
     def test_get_subagents(self, agent_mgr):
         subs = agent_mgr.get_subagents(agent_mgr.current_agent)
         assert subs == ["Agent1a"]
+
+
+# ── Per-agent language scope ───────────────────────────────────────────
+class TestPerAgentLanguageScope:
+    def test_agent1_blocks_csharp(self, agent_mgr):
+        """Agent1 is C++ Orchestrator — must refuse C# requests."""
+        assert agent_mgr.current_agent.value == "Agent1"
+        r = agent_mgr.process("Write a C# class")
+        assert r.allowed is False
+        assert "only writes" in r.response and "C++" in r.response
+
+    def test_agent2_blocks_cpp(self, agent_mgr):
+        """Agent2 is C# Architect — must refuse C++ requests."""
+        agent_mgr.switch_to_next()
+        assert agent_mgr.current_agent.value == "Agent2"
+        r = agent_mgr.process("Write a C++ linked list")
+        assert r.allowed is False
+        assert "only writes" in r.response and "C#" in r.response
+
+    def test_agent1_allows_cpp(self, agent_mgr):
+        r = agent_mgr.process("Write a C++ linked list")
+        assert r.allowed is True
+
+    def test_agent5_allows_both(self, agent_mgr):
+        for _ in range(4):
+            agent_mgr.switch_to_next()
+        assert agent_mgr.current_agent.value == "Agent5"
+        assert agent_mgr.process("Write a C++ class").allowed is True
+        assert agent_mgr.process("Write a C# class").allowed is True

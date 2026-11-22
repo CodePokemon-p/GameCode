@@ -1,18 +1,11 @@
 """
 agents.py — 5-agent pipeline, subagents, guardrails, agent manager.
-
-Covers Core Requirements:
-  * #1 5-agent architecture (5 primaries, each with a subagent)
-  * #3 Comprehensive guardrails (injection, off-topic, language,
-       plan-type no-edit, mandatory "What next?")
-  * #4 context hand-off is wired in Phase 2 (TUI); this module exposes
-       the hooks the hand-off layer needs.
 """
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
@@ -43,84 +36,93 @@ class AgentSpec:
     role: AgentRole
     display_name: str
     prompt: str
-    can_edit_files: bool            # plan-type agents set this False
+    can_edit_files: bool
     subagent_name: str
     subagent_prompt: str
+    allowed_languages: tuple[str, ...] = ("cpp", "csharp")
 
 
 AGENT_SPECS: dict[AgentRole, AgentSpec] = {
     AgentRole.CPP_ORCHESTRATOR: AgentSpec(
         role=AgentRole.CPP_ORCHESTRATOR,
         display_name="C++ Orchestrator",
-        can_edit_files=False,       # plan-type
+        can_edit_files=False,
+        allowed_languages=("cpp",),
         prompt=(
-            "You are the C++ Orchestrator. Your job is to plan C++ work, "
-            "break tasks into steps, and coordinate. You do NOT edit files "
-            "or run builds — you produce plans only. "
-            "Refuse off-topic queries (weather, politics, general knowledge). "
-            "Refuse any language other than C++ or C#. "
+            "You are the C++ Orchestrator. You plan C++ work, break tasks "
+            "into steps, and coordinate. You do NOT edit files or run builds. "
+            "You ONLY write C++. You refuse C# requests and tell the user to "
+            "switch to Agent2 or Agent4. Refuse off-topic queries "
+            "(weather, politics, general knowledge). Refuse all other languages. "
             "Always finish your reply with the exact line: 'What next?'."
         ),
         subagent_name="Agent1a",
         subagent_prompt=(
             "You are the C++ Snippet Helper, subagent to Agent1. "
-            "You produce small, self-contained C++ snippets when asked. "
-            "Never write Python/JS/Rust/Java. Always end with 'What next?'."
+            "You produce small, self-contained C++ snippets only. "
+            "Refuse C# and all other languages. Always end with 'What next?'."
         ),
     ),
     AgentRole.CSHARP_ARCHITECT: AgentSpec(
         role=AgentRole.CSHARP_ARCHITECT,
         display_name="C# Architect",
-        can_edit_files=True,        # build-type
+        can_edit_files=True,
+        allowed_languages=("csharp",),
         prompt=(
-            "You are the C# Architect. You design and write C# code. "
-            "Refuse off-topic queries. Refuse any language other than C# or C++. "
+            "You are the C# Architect. You design and write C# code only. "
+            "You refuse C++ requests and tell the user to switch to Agent1 "
+            "or Agent3. Refuse off-topic queries. Refuse all other languages. "
             "Always finish your reply with the exact line: 'What next?'."
         ),
         subagent_name="Agent2a",
         subagent_prompt=(
             "You are the C# Pattern Advisor, subagent to Agent2. "
-            "You propose idiomatic C# design patterns. "
-            "Refuse off-topic. Refuse non-C#/C++ languages. End with 'What next?'."
+            "You propose idiomatic C# design patterns only. "
+            "Refuse C++ and all other languages. End with 'What next?'."
         ),
     ),
     AgentRole.CPP_REVIEWER: AgentSpec(
         role=AgentRole.CPP_REVIEWER,
         display_name="C++ Reviewer",
-        can_edit_files=False,       # plan-type — review only
+        can_edit_files=False,
+        allowed_languages=("cpp",),
         prompt=(
-            "You are the C++ Reviewer. You read and critique C++ code. "
-            "You do NOT edit files or run builds. "
-            "Refuse off-topic queries. Refuse non-C++/C# languages. "
-            "Always finish your reply with the exact line: 'What next?'."
+            "You are the C++ Reviewer. You read and critique C++ code only. "
+            "You do NOT edit files or run builds. You refuse C# requests and "
+            "tell the user to switch to Agent2 or Agent4. Refuse off-topic "
+            "queries. Refuse all other languages. Always finish your reply "
+            "with the exact line: 'What next?'."
         ),
         subagent_name="Agent3a",
         subagent_prompt=(
             "You are the C++ Static Analysis Helper, subagent to Agent3. "
-            "You reason about undefined behaviour, ownership, and RAII. "
+            "You reason about C++ undefined behaviour, ownership, and RAII only. "
             "End with 'What next?'."
         ),
     ),
     AgentRole.CSHARP_DEBUGGER: AgentSpec(
         role=AgentRole.CSHARP_DEBUGGER,
         display_name="C# Debugger",
-        can_edit_files=True,        # build-type — debugger patches code
+        can_edit_files=True,
+        allowed_languages=("csharp",),
         prompt=(
-            "You are the C# Debugger. You diagnose and patch C# code. "
-            "Refuse off-topic queries. Refuse non-C#/C++ languages. "
+            "You are the C# Debugger. You diagnose and patch C# code only. "
+            "You refuse C++ requests and tell the user to switch to Agent1 "
+            "or Agent3. Refuse off-topic queries. Refuse all other languages. "
             "Always finish your reply with the exact line: 'What next?'."
         ),
         subagent_name="Agent4a",
         subagent_prompt=(
             "You are the C# Stack Tracer, subagent to Agent4. "
-            "You read exception traces and identify root cause. "
+            "You read C# exception traces and identify root cause. "
             "End with 'What next?'."
         ),
     ),
     AgentRole.SYSTEMS_ENGINEER: AgentSpec(
         role=AgentRole.SYSTEMS_ENGINEER,
         display_name="Systems Engineer",
-        can_edit_files=True,        # build-type
+        can_edit_files=True,
+        allowed_languages=("cpp", "csharp"),
         prompt=(
             "You are the Systems Engineer. You write C++ and C# and glue "
             "components together. Refuse off-topic queries. Refuse all "
@@ -144,15 +146,20 @@ class GuardrailResult:
     reason: str = ""
 
 
+# Lookaround patterns avoid \b-after-plus issues in "C++ " and "C# ".
+CPP_PATTERN = re.compile(r"(?<![a-zA-Z0-9])(c\+\+|cpp|cplusplus)(?![a-zA-Z0-9])")
+CS_PATTERN  = re.compile(r"(?<![a-zA-Z0-9])(c#|csharp|c-sharp|dotnet)(?![a-zA-Z0-9])")
+
+
 class Guardrail:
     """
-    Five-check input safety gate:
-
-      1. size sanity          (non-empty, ≤ MAX_INPUT_LEN)
-      2. prompt-injection     (keyword patterns)
-      3. off-topic            (weather / politics / general knowledge)
-      4. language restriction (only C++ / C# permitted)
-      5. plan-type edit block (plan agents may not edit files / run builds)
+    Six-check input safety gate:
+      1. size sanity
+      2. prompt-injection
+      3. off-topic
+      4. global language restriction (only C++/C# permitted)
+      5. per-agent language scope (Agent1 = C++ only, Agent2 = C# only, etc.)
+      6. plan-type edit block
     """
 
     MAX_INPUT_LEN = 4000
@@ -175,7 +182,6 @@ class Guardrail:
         "who created you", "tell me a story",
     ]
 
-    # Exact word match — "java" must NOT match "javascript" (regex \b handles it).
     BLOCKED_LANGUAGES = [
         "python", "javascript", "typescript", "rust", "java",
         "ruby", "golang", "go lang", "kotlin", "swift", "php",
@@ -194,7 +200,13 @@ class Guardrail:
     ]
 
     @classmethod
-    def check(cls, user_input: str, *, can_edit_files: bool) -> GuardrailResult:
+    def check(
+        cls,
+        user_input: str,
+        *,
+        can_edit_files: bool,
+        allowed_languages: tuple[str, ...] = ("cpp", "csharp"),
+    ) -> GuardrailResult:
         text = (user_input or "").strip()
         if not text:
             return GuardrailResult(False, "Empty input.")
@@ -205,6 +217,7 @@ class Guardrail:
 
         lower = text.lower()
 
+        # 1. Injection
         for pat in cls.INJECTION_PATTERNS:
             if pat in lower:
                 return GuardrailResult(
@@ -213,6 +226,7 @@ class Guardrail:
                     "Submit a normal coding request.",
                 )
 
+        # 2. Off-topic
         for kw in cls.OFF_TOPIC_KEYWORDS:
             if re.search(rf"\b{re.escape(kw)}\b", lower):
                 return GuardrailResult(
@@ -221,6 +235,7 @@ class Guardrail:
                     "I only assist with C++ and C# development.",
                 )
 
+        # 3. Global language restriction (all other languages banned)
         for lang in cls.BLOCKED_LANGUAGES:
             if re.search(rf"\b{re.escape(lang)}\b", lower):
                 return GuardrailResult(
@@ -229,14 +244,32 @@ class Guardrail:
                     f"(blocked: {lang}).",
                 )
 
+        # 4. Per-agent language scope
+        mentioned_cpp = bool(CPP_PATTERN.search(lower))
+        mentioned_cs = bool(CS_PATTERN.search(lower))
+
+        if mentioned_cpp and "cpp" not in allowed_languages:
+            return GuardrailResult(
+                False,
+                "🚫 GUARDRAIL: This agent only writes **C#** — you mentioned C++. "
+                "Press F2 / Ctrl+T / Tab to switch to a C++ agent (Agent1 or Agent3).",
+            )
+        if mentioned_cs and "csharp" not in allowed_languages:
+            return GuardrailResult(
+                False,
+                "🚫 GUARDRAIL: This agent only writes **C++** — you mentioned C#. "
+                "Press F2 / Ctrl+T / Tab to switch to a C# agent (Agent2 or Agent4).",
+            )
+
+        # 5. Plan-type edit block
         if not can_edit_files:
             for verb in cls.PLAN_TYPE_BLOCKED_VERBS:
                 if verb in lower:
                     return GuardrailResult(
                         False,
                         "🚫 GUARDRAIL: This is a plan-type agent — it may not "
-                        "edit files or run builds. Press Tab to switch to a "
-                        "build-type agent (Agent2, Agent4, or Agent5).",
+                        "edit files or run builds. Press F2 / Ctrl+T / Tab to "
+                        "switch to a build-type agent (Agent2, Agent4, or Agent5).",
                     )
 
         return GuardrailResult(True)
@@ -268,9 +301,7 @@ class AgentManager:
         self.license = LicenseManager(api_key, license_dir)
         self._index: int = 0
 
-    # Lifecycle -----------------------------------------------------------
     def bootstrap_prompts(self) -> None:
-        """Write encrypted prompts for any agent/subagent missing on disk."""
         for spec in AGENT_SPECS.values():
             for name, prompt in (
                 (spec.role.value, spec.prompt),
@@ -285,7 +316,6 @@ class AgentManager:
         self.prompt_store.load_prompt(self.current_agent.value)
         return self.current_agent
 
-    # State ---------------------------------------------------------------
     @property
     def current_agent(self) -> AgentRole:
         return AGENT_ORDER[self._index]
@@ -297,14 +327,11 @@ class AgentManager:
     def get_subagents(self, role: AgentRole) -> list[str]:
         return [AGENT_SPECS[role].subagent_name]
 
-    # Switching -----------------------------------------------------------
     def switch_to_next(self) -> AgentRole:
-        """Tab action. Clears old prompt, advances, loads new prompt."""
         self._index = (self._index + 1) % len(AGENT_ORDER)
         self.prompt_store.load_prompt(self.current_agent.value)
         return self.current_agent
 
-    # Dispatch ------------------------------------------------------------
     def process(self, user_input: str) -> AgentResponse:
         spec = self.current_spec
 
@@ -317,7 +344,11 @@ class AgentManager:
                 is_plan_type=not spec.can_edit_files,
             )
 
-        guard = Guardrail.check(user_input, can_edit_files=spec.can_edit_files)
+        guard = Guardrail.check(
+            user_input,
+            can_edit_files=spec.can_edit_files,
+            allowed_languages=spec.allowed_languages,
+        )
         if not guard.allowed:
             return AgentResponse(
                 allowed=False,
