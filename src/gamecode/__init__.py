@@ -9,7 +9,10 @@ from .agents import (
     AgentSpec,
     Guardrail,
     GuardrailResult,
+    WHAT_NEXT_LINE,
+    ANTI_JAILBREAK_BOILERPLATE,
 )
+from .guardrails import CPP_PATTERN, CS_PATTERN
 from .handoff import HandoffContext, HandoffManager, TranscriptEntry
 from .security import (
     AES256Cipher,
@@ -22,13 +25,12 @@ from .security import (
 __version__ = "0.1.0"
 
 __all__ = [
-    # security
     "AES256Cipher", "DecryptionError", "KeyDerivation",
     "LicenseManager", "PromptStore",
-    # agents
     "AGENT_ORDER", "AGENT_SPECS", "AgentManager", "AgentResponse",
     "AgentRole", "AgentSpec", "Guardrail", "GuardrailResult",
-    # handoff
+    "WHAT_NEXT_LINE", "ANTI_JAILBREAK_BOILERPLATE",
+    "CPP_PATTERN", "CS_PATTERN",
     "HandoffContext", "HandoffManager", "TranscriptEntry",
     "__version__",
 ]
