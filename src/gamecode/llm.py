@@ -58,9 +58,11 @@ class OpenCodeZenLLM(LLMClient):
     ):
         self.api_key = api_key
         self.base_url = base_url or os.getenv(
-            "OPENCODE_ZEN_BASE_URL", "https://api.opencode.ai/v1"
+            "OPENCODE_ZEN_BASE_URL", "https://opencode.ai/zen/v1"
         )
-        self.model = model or os.getenv("OPENCODE_ZEN_MODEL", "deepseek-chat")
+        self.model = model or os.getenv(
+            "OPENCODE_ZEN_MODEL", "deepseek-v4.1-flash-free"
+        )
 
     def complete(self, system_prompt: str, user_message: str) -> str:
         payload = json.dumps({
@@ -78,6 +80,7 @@ class OpenCodeZenLLM(LLMClient):
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
+                "User-Agent": "GameCode/0.1",
             },
         )
         try:

@@ -29,7 +29,7 @@ class TestMockLLM:
 class TestOpenCodeZenLLM:
     def test_default_model(self):
         client = OpenCodeZenLLM("sk-test")
-        assert client.model == "deepseek-chat"
+        assert client.model == "deepseek-v4.1-flash-free"
 
     def test_custom_model(self):
         client = OpenCodeZenLLM("sk-test", model="mimo-7b")

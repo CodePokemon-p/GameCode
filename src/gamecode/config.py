@@ -9,6 +9,7 @@ from pathlib import Path
 class Config:
     MIN_KEY_LEN = 20
     KEY_PREFIX = "sk-"
+    KEY_PREFIXES = ("sk-", "oc_sk_")
 
     def __init__(self, config_dir: Path | str | None = None):
         if config_dir is None:
@@ -37,4 +38,4 @@ class Config:
 
     @classmethod
     def validate_format(cls, key: str) -> bool:
-        return bool(key) and len(key) >= cls.MIN_KEY_LEN and key.startswith(cls.KEY_PREFIX)
+                return bool(key) and len(key) >= cls.MIN_KEY_LEN and key.startswith(cls.KEY_PREFIXES)
