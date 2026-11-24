@@ -139,12 +139,18 @@ class GameCodeApp(App):
         yield Footer()
 
     # ---- startup ---------------------------------------------------------
-        # ---- startup ---------------------------------------------------------
     def on_mount(self) -> None:
         self.title = "GameCode"
         self.sub_title = self.session_id
 
-        env_key = os.getenv(DEFAULT_API_KEY_ENV)  
+        env_key = os.getenv(DEFAULT_API_KEY_ENV)
+        key = env_key or self._explicit_key or self.config.load_api_key()
+        if key and Config.validate_format(key):
+            self._boot_unlocked(key)
+        elif self._skip_modal:
+            self._boot_locked()
+        else:
+            self.push_screen(ApiKeyScreen(), callback=self._on_key_submitted)
 
     def _on_key_submitted(self, key: str | None) -> None:
         if key and Config.validate_format(key):

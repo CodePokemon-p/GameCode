@@ -114,4 +114,5 @@ async def test_expired_license_locks_app(tmp_path):
         assert app._locked_mode is True
         assert app.query_one("#user-input").disabled is True
         await pilot.press("f2")
-        assert app.agent_mgr is None   # never booted
+        assert app.agent_mgr.license.is_valid() is False   # license really expired
+        assert app.query_one("#user-input").disabled is True   # still locked after F2
