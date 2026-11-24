@@ -14,8 +14,9 @@
 | 10 | API key gating | Done | Invalid or missing key gives Locked Mode (Build + Plan only). |
 | 11 | License expires after 2 days | Done | Verified by tests; expired license disables all agents. |
 | 12 | Windows installer + uninstaller | Done | Inno Setup `GameCode-Setup.exe`; uninstall removes app data. |
-| 13 | Documentation | In progress | This file, plus architecture and demo script. |
+| 13 | Documentation | Done | This file, README, architecture and demo script. |
 
 ## Notes and assumptions
-- The LLM layer uses a Mock client by default; `OpenCodeZenLLM` is implemented for live use (set `GAMECODE_USE_LIVE_LLM=1` with a real key).
+- The LLM layer uses a Mock client by default. `OpenCodeZenLLM` targets `https://opencode.ai/zen/v1` (set `GAMECODE_USE_LIVE_LLM=1` with a real key). Tested with a real key: authentication worked, but Zen's free usage limit (FreeUsageLimitError) blocked live replies, so the demo uses the mock.
+- Each agent has an encrypted subagent prompt (Agent1a to Agent5a), but the pipeline does not call subagents yet.
 - Any key starting with `sk-` and at least 20 characters is accepted as well-formed.

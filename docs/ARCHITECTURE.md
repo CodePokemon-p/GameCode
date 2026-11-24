@@ -49,6 +49,6 @@ page and an uninstaller that removes app data.
 - `config.json` stores the key in plain text; production should use Windows DPAPI.
 - The license is a local file; a determined user with local access could reset it.
   Production would need a server-side check.
-- The LLM is a Mock by default. `OpenCodeZenLLM` exists, but its base URL is
-  unverified and it has not been tested with a real key.
+- The LLM is a Mock by default. `OpenCodeZenLLM` targets `https://opencode.ai/zen/v1`
+  and authenticated with a real key, but Zen's free usage limit blocked live replies.
 - OpenCode fork, model anonymization, MCP servers and skills are deferred (see COMPLIANCE.md).
