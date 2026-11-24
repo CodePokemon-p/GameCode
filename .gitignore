@@ -31,3 +31,6 @@ handoffs/*.md
 Thumbs.db
 handoffs/*
 !handoffs/.gitkeep
+build/
+dist/
+*.spec
