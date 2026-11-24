@@ -1,25 +1,16 @@
 """GameCode — locked-down 5-agent coding assistant."""
 
 from .agents import (
-    AGENT_ORDER,
-    AGENT_SPECS,
-    AgentManager,
-    AgentResponse,
-    AgentRole,
-    AgentSpec,
-    Guardrail,
-    GuardrailResult,
-    WHAT_NEXT_LINE,
-    ANTI_JAILBREAK_BOILERPLATE,
+    AGENT_ORDER, AGENT_SPECS, ANTI_JAILBREAK_BOILERPLATE,
+    AgentManager, AgentResponse, AgentRole, AgentSpec,
+    Guardrail, GuardrailResult, WHAT_NEXT_LINE,
 )
+from .config import Config
 from .guardrails import CPP_PATTERN, CS_PATTERN
 from .handoff import HandoffContext, HandoffManager, TranscriptEntry
+from .llm import LLMClient, MockLLM, OpenCodeZenLLM, make_client
 from .security import (
-    AES256Cipher,
-    DecryptionError,
-    KeyDerivation,
-    LicenseManager,
-    PromptStore,
+    AES256Cipher, DecryptionError, KeyDerivation, LicenseManager, PromptStore,
 )
 
 __version__ = "0.1.0"
@@ -32,5 +23,6 @@ __all__ = [
     "WHAT_NEXT_LINE", "ANTI_JAILBREAK_BOILERPLATE",
     "CPP_PATTERN", "CS_PATTERN",
     "HandoffContext", "HandoffManager", "TranscriptEntry",
+    "Config", "LLMClient", "MockLLM", "OpenCodeZenLLM", "make_client",
     "__version__",
 ]

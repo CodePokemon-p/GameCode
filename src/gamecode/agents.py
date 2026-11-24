@@ -11,6 +11,7 @@ from enum import Enum
 from pathlib import Path
 
 from .guardrails import Guardrail, GuardrailResult
+from .llm import LLMClient, MockLLM
 from .security import LicenseManager, PromptStore
 
 
@@ -182,9 +183,11 @@ class AgentManager:
         api_key: str,
         prompts_dir: Path | str,
         license_dir: Path | str,
+        llm_client: LLMClient | None = None,
     ):
         self.prompt_store = PromptStore(api_key, prompts_dir)
         self.license = LicenseManager(api_key, license_dir)
+        self.llm = llm_client or MockLLM()
         self._index: int = 0
 
     def bootstrap_prompts(self) -> None:
@@ -244,11 +247,8 @@ class AgentManager:
                 is_plan_type=not spec.can_edit_files,
             )
 
-        # TODO Phase 3: replace stub with OpenCode Zen call.
-        body = (
-            f"[{spec.display_name}] Processing: '{user_input}'. "
-            f"(LLM not wired up yet — Phase 3.)"
-        )
+        system_prompt = self.prompt_store.get_active_prompt() or spec.prompt
+        body = self.llm.complete(system_prompt, user_input)
         if WHAT_NEXT_LINE.lower() not in body.lower():
             body = body.rstrip() + "\n\n" + WHAT_NEXT_LINE
 
