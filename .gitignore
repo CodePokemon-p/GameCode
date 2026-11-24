@@ -34,3 +34,4 @@ handoffs/*
 build/
 dist/
 *.spec
+installer_output/
