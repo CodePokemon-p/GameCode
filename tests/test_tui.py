@@ -4,12 +4,20 @@ from pathlib import Path
 
 import pytest
 
+from gamecode.security import LicenseManager
 from gamecode.tui import GameCodeApp
+
+VALID_KEY = "sk-test-key-1234567890abc"
 
 
 @pytest.fixture
 def app(tmp_path: Path) -> GameCodeApp:
-    return GameCodeApp(api_key="sk-test", base_dir=tmp_path)
+    """Boots directly into unlocked mode (valid explicit key)."""
+    return GameCodeApp(
+        api_key=VALID_KEY,
+        base_dir=tmp_path,
+        config_dir=tmp_path / "cfg",
+    )
 
 
 async def test_app_mounts(app):
@@ -21,8 +29,9 @@ async def test_app_mounts(app):
 
 async def test_starts_on_agent1(app):
     async with app.run_test():
+        assert app.agent_mgr is not None
         assert app.agent_mgr.current_agent.value == "Agent1"
-        assert app._locked is False
+        assert app._locked_mode is False
 
 
 async def test_tab_switches_agent_and_writes_handoff(app, tmp_path):
@@ -85,15 +94,24 @@ async def test_handoff_captures_transcript(app, tmp_path):
         assert "Agent2" in text and "Agent3" in text
 
 
-async def test_expired_license_locks_app(app):
-    st = app.agent_mgr.license.initialize_or_load()
+async def test_expired_license_locks_app(tmp_path):
+    """Pre-write an expired license before app boots."""
+    lic_dir = tmp_path / "licenses"
+    lic_dir.mkdir(parents=True, exist_ok=True)
+    lm = LicenseManager(VALID_KEY, lic_dir)
+    st = lm.initialize_or_load()
     st["expiry_date"] = (
         datetime.now(timezone.utc) - timedelta(days=1)
     ).isoformat()
-    app.agent_mgr.license._save(st)
+    lm._save(st)
 
+    app = GameCodeApp(
+        api_key=VALID_KEY,
+        base_dir=tmp_path,
+        config_dir=tmp_path / "cfg",
+    )
     async with app.run_test() as pilot:
-        assert app._locked is True
+        assert app._locked_mode is True
         assert app.query_one("#user-input").disabled is True
-        await pilot.press("tab")
-        assert app.agent_mgr.current_agent.value == "Agent1"
+        await pilot.press("f2")
+        assert app.agent_mgr is None   # never booted
