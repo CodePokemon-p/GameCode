@@ -378,10 +378,18 @@ class GameCodeApp(App):
         self._focus_input()
 
 
+def default_data_dir() -> Path:
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        return Path(appdata) / "GameCode"
+    return Path.home() / ".gamecode"
+
+
 def main() -> None:
     api_key = os.getenv(DEFAULT_API_KEY_ENV)
-    GameCodeApp(api_key=api_key).run()
-
+    data_dir = Path(os.getenv("GAMECODE_HOME") or default_data_dir())
+    data_dir.mkdir(parents=True, exist_ok=True)
+    GameCodeApp(api_key=api_key, base_dir=data_dir, config_dir=data_dir).run()
 
 if __name__ == "__main__":
     main()
