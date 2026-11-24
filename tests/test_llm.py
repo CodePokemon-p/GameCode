@@ -52,3 +52,28 @@ class TestFactory:
     def test_none_key_returns_mock(self):
         client = make_client(None)
         assert isinstance(client, MockLLM)
+
+
+class TestGroq:
+    def test_groq_defaults(self, monkeypatch):
+        from gamecode.llm import GroqLLM
+        monkeypatch.delenv("GROQ_MODEL", raising=False)
+        c = GroqLLM("gsk_test")
+        assert c.base_url == "https://api.groq.com/openai/v1"
+        assert c.model == "openai/gpt-oss-20b"
+
+    def test_factory_prefers_groq_when_live(self, monkeypatch):
+        from gamecode.llm import GroqLLM
+        monkeypatch.setenv("GAMECODE_USE_LIVE_LLM", "1")
+        monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+        assert isinstance(make_client("sk-test-key-1234567890abc"), GroqLLM)
+
+    def test_factory_uses_zen_without_groq_key(self, monkeypatch):
+        monkeypatch.setenv("GAMECODE_USE_LIVE_LLM", "1")
+        monkeypatch.delenv("GROQ_API_KEY", raising=False)
+        assert isinstance(make_client("sk-test-key-1234567890abc"), OpenCodeZenLLM)
+
+    def test_factory_mock_when_not_live(self, monkeypatch):
+        monkeypatch.delenv("GAMECODE_USE_LIVE_LLM", raising=False)
+        monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+        assert isinstance(make_client("sk-test-key-1234567890abc"), MockLLM)

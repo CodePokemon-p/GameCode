@@ -50,6 +50,8 @@ class MockLLM(LLMClient):
 class OpenCodeZenLLM(LLMClient):
     """Live client. Requires a valid OpenCode Zen API key."""
 
+    label = "OpenCode Zen"
+
     def __init__(
         self,
         api_key: str,
@@ -89,7 +91,7 @@ class OpenCodeZenLLM(LLMClient):
                 text = data["choices"][0]["message"]["content"].strip()
         except Exception as e:
             return (
-                f"[OpenCode Zen error: {e}. Falling back to local response.]\n\n"
+            f"[{self.label} error: {e}. Falling back to local response.]\n\n"
                 f"What next?"
             )
 
@@ -98,8 +100,39 @@ class OpenCodeZenLLM(LLMClient):
         return text
 
 
+class GroqLLM(OpenCodeZenLLM):
+    """Outside-provider client (Groq). Same OpenAI-style API as Zen."""
+
+    label = "LLM"
+
+    def __init__(self, api_key: str, model: str | None = None):
+        super().__init__(
+            api_key,
+            base_url="https://api.groq.com/openai/v1",
+            model=model or os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
+        )
+
+
+class GroqLLM(OpenCodeZenLLM):
+    """Outside-provider client (Groq). Same OpenAI-style API as Zen."""
+
+    label = "LLM"
+
+    def __init__(self, api_key: str, model: str | None = None):
+        super().__init__(
+            api_key,
+            base_url="https://api.groq.com/openai/v1",
+            model=model or os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
+        )
+
+
 def make_client(api_key: str | None) -> LLMClient:
-    """Production wiring: real Zen if key present, mock otherwise."""
-    if api_key and os.getenv("GAMECODE_USE_LIVE_LLM") == "1":
+    """Mock unless GAMECODE_USE_LIVE_LLM=1; then Groq if GROQ_API_KEY, else Zen."""
+    if os.getenv("GAMECODE_USE_LIVE_LLM") != "1":
+        return MockLLM()
+    groq_key = os.getenv("GROQ_API_KEY")
+    if groq_key:
+        return GroqLLM(groq_key)
+    if api_key:
         return OpenCodeZenLLM(api_key)
     return MockLLM()
