@@ -192,3 +192,6 @@ Output: `installer_output\GameCode-Setup.exe`.
 - [Compliance matrix](docs/COMPLIANCE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Demo script](docs/DEMO_SCRIPT.md)
+
+- Video Resources
+https://drive.google.com/drive/folders/1O4ntC_C2qOtg7Rr0IdaUpkANOmSp0mZt?usp=sharing
