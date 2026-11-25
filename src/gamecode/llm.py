@@ -136,3 +136,38 @@ def make_client(api_key: str | None) -> LLMClient:
     if api_key:
         return OpenCodeZenLLM(api_key)
     return MockLLM()
+
+
+AGENT_MODELS = {
+    "Agent1": "openai/gpt-oss-120b",
+    "Agent2": "qwen/qwen3.8-27b",
+    "Agent3": "openai/gpt-oss-20b",
+    "Agent4": "qwen/qwen3.8-27b",
+    "Agent5": "openai/gpt-oss-120b",
+}
+
+
+class RoutedLLM(LLMClient):
+    """Gives each agent its own default model."""
+
+    def __init__(self, groq_key: str, models: dict[str, str] | None = None):
+        self.models = dict(models or AGENT_MODELS)
+        self._clients = {
+            name: GroqLLM(groq_key, model=model)
+            for name, model in self.models.items()
+        }
+        self._current: str | None = None
+
+    def set_agent(self, name: str) -> None:
+        self._current = name
+
+    def complete(self, system_prompt: str, user_message: str) -> str:
+        client = self._clients.get(self._current) or next(iter(self._clients.values()))
+        return client.complete(system_prompt, user_message)
+
+
+def make_agent_client(api_key: str | None) -> LLMClient:
+    """Per-agent models when live with a Groq key; otherwise same as make_client."""
+    if os.getenv("GAMECODE_USE_LIVE_LLM") == "1" and os.getenv("GROQ_API_KEY"):
+        return RoutedLLM(os.environ["GROQ_API_KEY"])
+    return make_client(api_key)

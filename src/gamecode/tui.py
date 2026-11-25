@@ -21,7 +21,7 @@ from textual.widgets import Button, Footer, Header, Input, Label, Markdown, Stat
 from .agents import AgentManager, Guardrail
 from .config import Config
 from .handoff import HandoffContext, HandoffManager, TranscriptEntry
-from .llm import make_client
+from .llm import make_agent_client
 
 DEFAULT_API_KEY_ENV = "GAMECODE_API_KEY"
 
@@ -162,7 +162,7 @@ class GameCodeApp(App):
     # ---- unlocked boot ---------------------------------------------------
     def _boot_unlocked(self, api_key: str) -> None:
         self._init_key = api_key
-        llm = make_client(api_key)
+        llm = make_agent_client(api_key)
         self.agent_mgr = AgentManager(
             api_key,
             prompts_dir=self.base_dir / "prompts",

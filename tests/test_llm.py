@@ -77,3 +77,33 @@ class TestGroq:
         monkeypatch.delenv("GAMECODE_USE_LIVE_LLM", raising=False)
         monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
         assert isinstance(make_client("sk-test-key-1234567890abc"), MockLLM)
+    
+
+class TestRouted:
+    def test_each_agent_has_its_own_model(self):
+        from gamecode.llm import AGENT_MODELS, RoutedLLM
+        r = RoutedLLM("gsk_test")
+        for name, model in AGENT_MODELS.items():
+            assert r._clients[name].model == model
+        assert len(set(AGENT_MODELS.values())) >= 2
+
+    def test_set_agent_picks_that_agents_client(self):
+        from gamecode.llm import RoutedLLM
+        r = RoutedLLM("gsk_test")
+        seen = []
+        for name, c in r._clients.items():
+            c.complete = lambda s, u, n=name: seen.append(n) or "x"
+        r.set_agent("Agent2")
+        r.complete("sys", "msg")
+        assert seen == ["Agent2"]
+
+    def test_live_with_groq_key_gives_router(self, monkeypatch):
+        from gamecode.llm import RoutedLLM, make_agent_client
+        monkeypatch.setenv("GAMECODE_USE_LIVE_LLM", "1")
+        monkeypatch.setenv("GROQ_API_KEY", "gsk_test")
+        assert isinstance(make_agent_client("sk-test-key-1234567890abc"), RoutedLLM)
+
+    def test_not_live_gives_mock(self, monkeypatch):
+        from gamecode.llm import make_agent_client
+        monkeypatch.delenv("GAMECODE_USE_LIVE_LLM", raising=False)
+        assert isinstance(make_agent_client("sk-test-key-1234567890abc"), MockLLM)

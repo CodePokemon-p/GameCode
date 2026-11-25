@@ -248,6 +248,8 @@ class AgentManager:
             )
 
         system_prompt = self.prompt_store.get_active_prompt() or spec.prompt
+        if hasattr(self.llm, "set_agent"):
+            self.llm.set_agent(spec.role.value)
         body = self.llm.complete(system_prompt, user_input)
         if WHAT_NEXT_LINE.lower() not in body.lower():
             body = body.rstrip() + "\n\n" + WHAT_NEXT_LINE
