@@ -1,5 +1,0 @@
-[33m5bfc875[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m feat(handoff): .md context hand-off manager with session folders and sequence files
-[33ma9092b9[m test: agent architecture + guardrail + manager test suite (49 tests passing)
-[33m1252c65[m feat(agents): 5 primary agents + subagents, full guardrail suite (injection/off-topic/language/plan-type no-edit), enforced 'What next?'
-[33m73486b5[m feat(security): AES-256-GCM cipher, persistent 2-day license, encrypted prompt store with clear-on-switch
-[33mb7ff0b4[m chore: project scaffolding (src layout, pyproject, gitignore, empty docs/installer folders)
