@@ -7,7 +7,7 @@
 | 3 | Model anonymization + outside-provider model | Done | No model or provider name is shown in the UI. Groq is the outside provider; all five agents use it. |
 | 4 | Per-agent system prompts | Done | Each agent has its own prompt, stored encrypted. |
 | 5 | Prompt protection | Done | AES-256-GCM, decrypted on demand, cleared on agent switch. |
-| 6 | Context hand-off via .md | Done | Every switch writes a numbered .md file in `handoffs/`. |
+| 6 | Context hand-off via .md | Done | Every switch writes a numbered .md file in `handoffs/`. Every allowed agent reply is also saved as a `.md` file in `outputs/<session>/`. |
 | 7 | Guardrails | Done | Injection defense, off-topic and language scope, plan-type no-edit, "What next?" enforced in code. |
 | 8 | MCP servers + skills | Deferred | Documented as future work. |
 | 9 | Tab-only switching, no /models | Done | Tab / F2 / Ctrl+T switch agents; there is no /models command. |
@@ -25,7 +25,7 @@
 - **Req 1 (fork OpenCode):** built as a standalone Python/Textual app instead of a fork, so there was no OpenCode branding to replace. The app is branded "GameCode" throughout.
 - **Req 2 (per-agent default models):** each agent has its own default model (a router in `llm.py`). Because Zen's free limit blocked live requests, all five models are served by Groq instead of Zen free models. The Zen client is implemented but not used in the demo. Subagent prompts exist but subagents are not called yet.
 - **Req 3 (anonymization):** model and provider names are never shown in the UI, and error messages only say "LLM". Groq is the outside provider (OpenRouter was not used).
-- **Req 6 (hand-off):** hand-off `.md` files are written by the app on every agent switch. Agents do not yet generate `.md` files themselves.
+- **Req 6 (hand-off):** hand-off `.md` files are written on every agent switch, and each allowed agent reply is saved as its own `.md` file. The app writes these files, not the model through a file tool.
 - **Req 8 (MCP and skills):** not implemented. No skills from a public GitHub repo were imported.
 - **Req 10 (API key):** a dedicated OpenCode workspace and API key were created. The key authenticated against `https://opencode.ai/zen/v1`, but Zen returned `FreeUsageLimitError` for live requests.
 - **Req 12 (dependencies):** Python and all pip packages are bundled inside the PyInstaller build, so the installer needs no separate Python. `graphifyy` is not used.
