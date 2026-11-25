@@ -94,6 +94,7 @@ python run_gamecode.py
 | `GAMECODE_API_KEY` | Key that unlocks the 5-agent pipeline |
 | `GAMECODE_USE_LIVE_LLM` | Set to `1` to call OpenCode Zen instead of the mock |
 | `GAMECODE_HOME` | Override the data folder (default `%APPDATA%\GameCode`) |
+| `GROQ_API_KEY` | With the live flag on, gives each agent its own Groq model |
 | `OPENCODE_ZEN_MODEL` | Override the Zen model name |
 
 A key is accepted if it starts with `sk-` or `oc_sk_` and is at least 20 characters.
@@ -114,9 +115,9 @@ pytest
 Output: `installer_output\GameCode-Setup.exe`.
 
 ## Known limitations
-
-- The default LLM is a deterministic mock, so the full pipeline works offline.
-  `OpenCodeZenLLM` targets `https://opencode.ai/zen/v1`. The key authenticated, but
+- With `GAMECODE_USE_LIVE_LLM=1` and a `GROQ_API_KEY`, each agent uses its own
+  Groq model. Without them, a deterministic mock keeps the pipeline working offline.
+  `OpenCodeZenLLM` targets `https://opencode.ai/zen/v1`; the key authenticated, but
   Zen's free usage limit blocked live replies during testing.
 - Subagent prompts are stored encrypted, but subagents are not yet called by the pipeline.
 - The API key is checked for format only, not against a server.
