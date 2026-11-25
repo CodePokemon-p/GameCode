@@ -23,6 +23,7 @@ from .agents import AgentManager, Guardrail
 from .config import Config
 from .handoff import HandoffContext, HandoffManager, TranscriptEntry
 from .llm import make_agent_client
+from .mcp import load_mcp_servers
 
 DEFAULT_API_KEY_ENV = "GAMECODE_API_KEY"
 
@@ -195,6 +196,10 @@ class GameCodeApp(App):
             "_Unlocked mode: 5-agent pipeline, encrypted prompts, .md hand-off. "
             "Press **F2** (or **Ctrl+T**) to switch agent._"
         )
+        servers = load_mcp_servers(bundled_mcp_config())
+        if servers:
+            names = ", ".join(s.name for s in servers if s.enabled)
+            self._log(f"_MCP servers configured: {names} (config only; not launched)_")
         self.set_timer(0.1, self._focus_input)
 
     # ---- locked boot -----------------------------------------------------
@@ -399,6 +404,14 @@ def bundled_skills_dir() -> Path:
     if getattr(sys, "frozen", False):
         return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "skills"
     return Path(__file__).resolve().parent.parent.parent / "skills"
+
+def bundled_mcp_config() -> Path:
+    env = os.getenv("GAMECODE_MCP")
+    if env:
+        return Path(env)
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "mcp.json"
+    return Path(__file__).resolve().parent.parent.parent / "mcp.json"
 
 
 def default_data_dir() -> Path:
