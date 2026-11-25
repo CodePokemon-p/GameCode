@@ -24,7 +24,7 @@ from .config import Config
 from .handoff import HandoffContext, HandoffManager, TranscriptEntry
 from .llm import make_agent_client
 from .mcp import load_mcp_servers
-
+from .mcp_client import McpClient, McpError
 DEFAULT_API_KEY_ENV = "GAMECODE_API_KEY"
 
 LOCKED_AGENTS = {
@@ -112,9 +112,12 @@ class GameCodeApp(App):
         base_dir: Path | str | None = None,
         config_dir: Path | str | None = None,
         skip_modal: bool = False,
+        enable_mcp: bool = False,
     ):
         super().__init__()
         self._skip_modal = skip_modal
+        self._enable_mcp = enable_mcp
+        self._mcp = None
         self.base_dir = Path(base_dir) if base_dir else Path.cwd()
         self.config = Config(config_dir or self.base_dir / "userdata")
         self._explicit_key = api_key
@@ -171,6 +174,7 @@ class GameCodeApp(App):
             license_dir=self.base_dir / "licenses",
             llm_client=llm,
             skills_dir=bundled_skills_dir(),
+            mcp=self._start_mcp(),
         )
         self._license_mgr = self.agent_mgr.license
 
@@ -196,10 +200,16 @@ class GameCodeApp(App):
             "_Unlocked mode: 5-agent pipeline, encrypted prompts, .md hand-off. "
             "Press **F2** (or **Ctrl+T**) to switch agent._"
         )
-        servers = load_mcp_servers(bundled_mcp_config())
-        if servers:
-            names = ", ".join(s.name for s in servers if s.enabled)
-            self._log(f"_MCP servers configured: {names} (config only; not launched)_")
+        if self._mcp is not None:
+            self._log(
+                "_MCP server running: agents can use workspace tools "
+                "(plan-type agents are read-only)._"
+            )
+        else:
+            servers = load_mcp_servers(bundled_mcp_config())
+            if servers:
+                names = ", ".join(s.name for s in servers if s.enabled)
+                self._log(f"_MCP servers configured: {names} (config only; not launched)_")
         self.set_timer(0.1, self._focus_input)
 
     # ---- locked boot -----------------------------------------------------
@@ -242,6 +252,29 @@ class GameCodeApp(App):
         self._log("⛔ **License expired.** All agents, prompts, and tools are disabled.")
 
     # ---- shared ----------------------------------------------------------
+    def _start_mcp(self):
+        if not self._enable_mcp:
+            return None
+        if getattr(sys, "frozen", False):
+            cmd = [sys.executable, "--mcp-server"]
+            env: dict = {}
+        else:
+            cmd = [sys.executable, "-m", "gamecode.mcp_server"]
+            env = {"PYTHONPATH": str(Path(__file__).resolve().parent.parent)}
+        env["GAMECODE_WORKSPACE"] = str(self.base_dir / "workspace")
+        try:
+            client = McpClient(cmd, env=env, timeout=10)
+            client.start()
+        except (McpError, OSError):
+            return None
+        self._mcp = client
+        return client
+
+    def on_unmount(self) -> None:
+        if self._mcp is not None:
+            self._mcp.close()
+            self._mcp = None
+
     def _focus_input(self) -> None:
         try:
             self.query_one("#user-input", Input).focus()
@@ -422,10 +455,16 @@ def default_data_dir() -> Path:
 
 
 def main() -> None:
+    if "--mcp-server" in sys.argv:
+        from .mcp_server import main as run_mcp_server
+        run_mcp_server()
+        return
     api_key = os.getenv(DEFAULT_API_KEY_ENV)
     data_dir = Path(os.getenv("GAMECODE_HOME") or default_data_dir())
     data_dir.mkdir(parents=True, exist_ok=True)
-    GameCodeApp(api_key=api_key, base_dir=data_dir, config_dir=data_dir).run()
+    GameCodeApp(
+        api_key=api_key, base_dir=data_dir, config_dir=data_dir, enable_mcp=True
+    ).run()
 
 if __name__ == "__main__":
     main()
