@@ -116,3 +116,20 @@ async def test_expired_license_locks_app(tmp_path):
         await pilot.press("f2")
         assert app.agent_mgr.license.is_valid() is False   # license really expired
         assert app.query_one("#user-input").disabled is True   # still locked after F2
+    
+
+async def test_agent_reply_saved_as_md(app, tmp_path):
+    async with app.run_test() as pilot:
+        app.query_one("#user-input").value = "Plan a C++ linked list"
+        await pilot.press("enter")
+        files = list((tmp_path / "outputs" / app.session_id).glob("*.md"))
+        assert len(files) == 1
+        assert "What next?" in files[0].read_text(encoding="utf-8")
+
+
+async def test_blocked_request_saves_no_md(app, tmp_path):
+    async with app.run_test() as pilot:
+        app.query_one("#user-input").value = "What's the weather"
+        await pilot.press("enter")
+        out_dir = tmp_path / "outputs" / app.session_id
+        assert not out_dir.exists() or not list(out_dir.glob("*.md"))

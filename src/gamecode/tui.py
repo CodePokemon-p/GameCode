@@ -263,6 +263,16 @@ class GameCodeApp(App):
     def _record(self, role: str, text: str) -> None:
         self.transcript.append(TranscriptEntry(role=role, text=text))
 
+    def _save_output(self, agent: str, display_name: str, text: str) -> Path:
+        out_dir = self.base_dir / "outputs" / self.session_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+        n = len(list(out_dir.glob("*.md"))) + 1
+        path = out_dir / f"{n:03d}_{agent}.md"
+        path.write_text(
+            f"# {display_name} ({agent})\n\n{text}\n", encoding="utf-8"
+        )
+        return path
+
     def _refresh_status_bar(self) -> None:
         bar = self.query_one("#status-bar", Static)
         bar.remove_class("plan-type", "build-type", "locked")
@@ -307,6 +317,8 @@ class GameCodeApp(App):
             return
         self._log(f"**🤖 {result.display_name}:**\n\n{result.response}")
         self._record("agent", result.response)
+        saved = self._save_output(result.agent, result.display_name, result.response)
+        self._log(f"_📄 Saved output: `{saved.name}`_")
 
     def _handle_locked_message(self, text: str) -> None:
         # License still gates locked mode
