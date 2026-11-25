@@ -13,6 +13,8 @@ pyinstaller `
   --collect-all textual `
   --collect-all rich `
   --collect-submodules gamecode `
+  --add-data "skills;skills" `
+  --add-data "mcp.json;." `
   --noconfirm `
   run_gamecode.py
 
