@@ -51,4 +51,4 @@ page and an uninstaller that removes app data.
   Production would need a server-side check.
 - The LLM is a Mock by default. `OpenCodeZenLLM` targets `https://opencode.ai/zen/v1`
   and authenticated with a real key, but Zen's free usage limit blocked live replies.
-- OpenCode fork, model anonymization, MCP servers and skills are deferred (see COMPLIANCE.md).
+- OpenCode fork and model-name visibility are the only major deferrals. MCP servers, agent tool-calling, and a bundled skill are now implemented and live-verified. See `COMPLIANCE.md` for the full matrix.

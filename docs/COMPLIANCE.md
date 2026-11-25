@@ -9,7 +9,7 @@
 | 5 | Prompt protection | Done | AES-256-GCM, decrypted on demand, cleared on agent switch. |
 | 6 | Context hand-off via .md | Done | Every switch writes a numbered .md file in `handoffs/`. Every allowed agent reply is also saved as a `.md` file in `outputs/<session>/`. |
 | 7 | Guardrails | Done | Injection defense, off-topic and language scope, plan-type no-edit, "What next?" enforced in code. |
-| 8 | MCP servers + skills | Deferred | Documented as future work. |
+| 8 | MCP servers + MIT/Apache skills | Done | Custom MCP stdio server (`mcp_server.py`) with `list_outputs`, `read_output`, `write_markdown` tools; MCP stdio client (`mcp_client.py`); `TOOL:` protocol wired into agents with plan-type scope (plan agents get read-only tools only). Live-verified end-to-end: Agent5 saved `plan.md` to the workspace via a real tool call driven by Groq. Skills loaded from `skills/mcp-builder/` (MIT, credited in `THIRD_PARTY_NOTICES.md`). |
 | 9 | Tab-only switching, no /models | Done | Tab / F2 / Ctrl+T switch agents; there is no /models command. |
 | 10 | API key gating | Done | Invalid or missing key gives Locked Mode (Build + Plan only). |
 | 11 | License expires after 2 days | Done | Verified by tests; expired license disables all agents. |
@@ -26,6 +26,7 @@
 - **Req 2 (per-agent default models):** each agent has its own default model (a router in `llm.py`). Because Zen's free limit blocked live requests, all five models are served by Groq instead of Zen free models. The Zen client is implemented but not used in the demo. Subagent prompts exist but subagents are not called yet.
 - **Req 3 (anonymization):** model and provider names are never shown in the UI, and error messages only say "LLM". Groq is the outside provider (OpenRouter was not used).
 - **Req 6 (hand-off):** hand-off `.md` files are written on every agent switch, and each allowed agent reply is saved as its own `.md` file. The app writes these files, not the model through a file tool.
-- **Req 8 (MCP and skills):** not implemented. No skills from a public GitHub repo were imported.
+- **Req 8 (MCP and skills):** implemented. Custom MCP server (stdio JSON-RPC) + client + agent-side `TOOL:` protocol with plan-type scope. Live-verified: a real Groq-driven tool call saved `plan.md` into the workspace folder. Skills loaded from `skills/mcp-builder/` (MIT, sourced from the public `mcp-builder` skill, credited in `THIRD_PARTY_NOTICES.md`).
+- **Free-model protocol adherence:** with explicit few-shot examples in the system prompt, the free Groq models reliably emit the required `TOOL: {...}` line. Without them, models drift into normal prose. This is documented and mitigated by prompt engineering in `agents.py::_tools_note`.
 - **Req 10 (API key):** a dedicated OpenCode workspace and API key were created. The key authenticated against `https://opencode.ai/zen/v1`, but Zen returned `FreeUsageLimitError` for live requests.
 - **Req 12 (dependencies):** Python and all pip packages are bundled inside the PyInstaller build, so the installer needs no separate Python. `graphifyy` is not used.
