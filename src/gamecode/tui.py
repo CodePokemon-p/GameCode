@@ -9,6 +9,7 @@ Two modes:
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -168,6 +169,7 @@ class GameCodeApp(App):
             prompts_dir=self.base_dir / "prompts",
             license_dir=self.base_dir / "licenses",
             llm_client=llm,
+            skills_dir=bundled_skills_dir(),
         )
         self._license_mgr = self.agent_mgr.license
 
@@ -388,6 +390,15 @@ class GameCodeApp(App):
         self.transcript.clear()
         self._refresh_status_bar()
         self._focus_input()
+
+
+def bundled_skills_dir() -> Path:
+    env = os.getenv("GAMECODE_SKILLS")
+    if env:
+        return Path(env)
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "skills"
+    return Path(__file__).resolve().parent.parent.parent / "skills"
 
 
 def default_data_dir() -> Path:

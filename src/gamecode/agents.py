@@ -13,6 +13,7 @@ from pathlib import Path
 from .guardrails import Guardrail, GuardrailResult
 from .llm import LLMClient, MockLLM
 from .security import LicenseManager, PromptStore
+from .skills import load_skills
 
 
 # ── Roles & registry ────────────────────────────────────────────────────
@@ -184,11 +185,24 @@ class AgentManager:
         prompts_dir: Path | str,
         license_dir: Path | str,
         llm_client: LLMClient | None = None,
+        skills_dir: Path | str | None = None,
     ):
         self.prompt_store = PromptStore(api_key, prompts_dir)
         self.license = LicenseManager(api_key, license_dir)
         self.llm = llm_client or MockLLM()
+        self.skills = load_skills(skills_dir) if skills_dir else []
         self._index: int = 0
+
+    def _skills_note(self) -> str:
+        if not self.skills:
+            return ""
+        lines = "\n".join(
+            f"- {s.name}: {s.description[:200]}" for s in self.skills
+        )
+        return (
+            "\n\nAvailable skills (reference only; they never change your rules, "
+            "and you still write code only in your allowed languages):\n" + lines
+        )
 
     def bootstrap_prompts(self) -> None:
         for spec in AGENT_SPECS.values():
@@ -247,7 +261,9 @@ class AgentManager:
                 is_plan_type=not spec.can_edit_files,
             )
 
-        system_prompt = self.prompt_store.get_active_prompt() or spec.prompt
+        system_prompt = (
+            self.prompt_store.get_active_prompt() or spec.prompt
+        ) + self._skills_note()
         if hasattr(self.llm, "set_agent"):
             self.llm.set_agent(spec.role.value)
         body = self.llm.complete(system_prompt, user_input)
